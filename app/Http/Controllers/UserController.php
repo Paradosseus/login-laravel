@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Queue\RedisQueue;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Hash;
+
+class UserController extends Controller
+{
+    public function index()
+    {
+        $data = User::all();
+        return view('user.index', ['users'=>$data]);
+
+    }
+    public function login()
+    {
+        return view('user.login');  
+    }
+
+    public function process(Request $req)
+    {
+        $validated = $req->validate([
+            'email'=>['required', 'email'],
+            'password'=> 'required'
+        ]);
+
+        if(auth()->attempt($validated)){
+            $req->session()->regenerate();
+            return redirect('/');
+        }
+    }
+
+    public function register()
+    {
+        return view('user.register');
+    }
+
+    public function store(Request $req)
+    {
+        $validated  = $req->validate([
+            "name"=>['required', 'min:5'],
+            "email"=>['required', 'email', Rule::unique('users', 'email'),],
+            "password"=>'required|confirmed|min:6'
+        ]);
+
+        $validated['password']=Hash::make($validated['password']);
+        $user=User::create($validated);
+    }
+
+    public function logout(Request $req)
+    {
+        auth()->logout();
+        $req->session()->invalidate();
+        $req->session()->regenerateToken();
+
+        return redirect('login');
+    }
+}
